@@ -8,8 +8,9 @@ import logging
 import os
 import glob
 from datetime import datetime
-import shutil  # Added for directory cleanup
-import psutil  # Added for process cleanup
+import shutil
+import psutil
+import tempfile  # Added for temporary directories
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 DOWNLOAD_DIR = "auction_exports"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-def setup_chrome_options():
+def setup_chrome_options(user_data_dir):
     """Set up Chrome options for headless browsing with a unique user data directory."""
     chrome_options = Options()
     chrome_options.add_argument("--headless")
@@ -28,8 +29,6 @@ def setup_chrome_options():
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
-    # Specify a unique user data directory
-    user_data_dir = os.path.join(DOWNLOAD_DIR, "chrome_user_data_ibbi")
     chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
     chrome_options.add_experimental_option('prefs', {
         "download.default_directory": os.path.abspath(DOWNLOAD_DIR),
@@ -38,7 +37,7 @@ def setup_chrome_options():
         "plugins.always_open_pdf_externally": True,
         "safebrowsing.enabled": True
     })
-    return chrome_options, user_data_dir
+    return chrome_options
 
 def cleanup_chrome_processes():
     """Kill any lingering Chrome processes."""
@@ -55,8 +54,12 @@ def scrape_auctions():
     driver = None
     user_data_dir = None
     try:
-        # Setup Chrome driver
-        chrome_options, user_data_dir = setup_chrome_options()
+        # Clean up any lingering Chrome processes before starting
+        cleanup_chrome_processes()
+
+        # Create a temporary user data directory
+        user_data_dir = tempfile.mkdtemp(prefix="chrome_user_data_ibbi_")
+        chrome_options = setup_chrome_options(user_data_dir)
         logger.info("Download directory set to: %s", os.path.abspath(DOWNLOAD_DIR))
         driver = webdriver.Chrome(options=chrome_options)
         
