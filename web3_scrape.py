@@ -7,8 +7,10 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import pandas as pd
 from selenium.common.exceptions import TimeoutException
-from datetime import datetime  # Added for date suffix
-import os  # Added for directory handling
+from datetime import datetime
+import os
+import shutil  # Added for directory cleanup
+import psutil  # Added for process cleanup
 
 options = Options()
 # options.add_argument("--headless")
@@ -17,66 +19,93 @@ options = Options()
 DOWNLOAD_DIR = "auction_exports"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-driver = webdriver.Chrome(options=options)
-wait = WebDriverWait(driver, 15)
-driver.get("https://eauction.gov.in/eAuction/app?page=FrontEndEauctionByDate&service=page")
-time.sleep(5)
+# Specify a unique user data directory
+user_data_dir = os.path.join(DOWNLOAD_DIR, "chrome_user_data_web3")
+options.add_argument(f"--user-data-dir={user_data_dir}")
 
+def cleanup_chrome_processes():
+    """Kill any lingering Chrome processes."""
+    for proc in psutil.process_iter(['name']):
+        if proc.info['name'] in ['chrome', 'chromedriver']:
+            try:
+                proc.kill()
+                print(f"Killed lingering process: {proc.info['name']}")
+            except psutil.NoSuchProcess:
+                pass
+
+driver = None
 try:
-    closing_tab = driver.find_element(By.ID, "closingWeekTab")
-    closing_tab.click()
+    driver = webdriver.Chrome(options=options)
+    wait = WebDriverWait(driver, 15)
+    driver.get("https://eauction.gov.in/eAuction/app?page=FrontEndEauctionByDate&service=page")
     time.sleep(5)
-except Exception as e:
-    print("Could not click 'Closing within 7 days' tab:", e)
-
-results = []
-page_num = 1
-
-while True:
-    print(f"Scraping page {page_num}...")
-    search_links = driver.find_elements(By.XPATH, "//a[starts-with(@id, 'view_')]")
-    popup_urls = [link.get_attribute("href") for link in search_links]
-
-    for url in popup_urls:
-        driver.execute_script("window.open(arguments[0]);", url)
-        driver.switch_to.window(driver.window_handles[-1])
-        time.sleep(5)
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        data = {}
-
-        def get_value(label):
-            td = soup.find('td', string=lambda s: s and label in s)
-            if td and td.find_next_sibling('td'):
-                return td.find_next_sibling('td').get_text(strip=True)
-            return ""
-
-        data['Organisation Chain'] = get_value("Organisation Chain")
-        data['Auction ID'] = get_value("Auction ID")
-        data['EMD Amount'] = get_value("EMD Amount in ₹")
-        data['Starting Price'] = get_value("Starting Price in ₹")
-        data['Submission Start Date'] = get_value("Submission Start Date")
-        data['Submission End Date'] = get_value("Submission End Date")
-        data['Auction Start Date'] = get_value("Auction Start Date")
-
-        results.append(data)
-        driver.close()
-        driver.switch_to.window(driver.window_handles[0])
 
     try:
-        next_btn = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="linkFwd"]')))
-        driver.execute_script("arguments[0].scrollIntoView(true);", next_btn)
-        time.sleep(1)
-        next_btn.click()
-        time.sleep(3)
-        page_num += 1
-    except TimeoutException:
-        print("No more pages or next button not clickable (timeout).")
-        break
+        closing_tab = driver.find_element(By.ID, "closingWeekTab")
+        closing_tab.click()
+        time.sleep(5)
     except Exception as e:
-        print("No more pages or next button not found.", e)
-        break
+        print("Could not click 'Closing within 7 days' tab:", e)
 
-driver.quit()
+    results = []
+    page_num = 1
+
+    while True:
+        print(f"Scraping page {page_num}...")
+        search_links = driver.find_elements(By.XPATH, "//a[starts-with(@id, 'view_')]")
+        popup_urls = [link.get_attribute("href") for link in search_links]
+
+        for url in popup_urls:
+            driver.execute_script("window.open(arguments[0]);", url)
+            driver.switch_to.window(driver.window_handles[-1])
+            time.sleep(5)
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            data = {}
+
+            def get_value(label):
+                td = soup.find('td', string=lambda s: s and label in s)
+                if td and td.find_next_sibling('td'):
+                    return td.find_next_sibling('td').get_text(strip=True)
+                return ""
+
+            data['Organisation Chain'] = get_value("Organisation Chain")
+            data['Auction ID'] = get_value("Auction ID")
+            data['EMD Amount'] = get_value("EMD Amount in ₹")
+            data['Starting Price'] = get_value("Starting Price in ₹")
+            data['Submission Start Date'] = get_value("Submission Start Date")
+            data['Submission End Date'] = get_value("Submission End Date")
+            data['Auction Start Date'] = get_value("Auction Start Date")
+
+            results.append(data)
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+
+        try:
+            next_btn = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="linkFwd"]')))
+            driver.execute_script("arguments[0].scrollIntoView(true);", next_btn)
+            time.sleep(1)
+            next_btn.click()
+            time.sleep(3)
+            page_num += 1
+        except TimeoutException:
+            print("No more pages or next button not clickable (timeout).")
+            break
+        except Exception as e:
+            print("No more pages or next button not found.", e)
+            break
+
+finally:
+    if driver:
+        driver.quit()
+        print("Browser closed")
+    # Additional cleanup
+    cleanup_chrome_processes()
+    if user_data_dir and os.path.exists(user_data_dir):
+        try:
+            shutil.rmtree(user_data_dir)
+            print("Cleaned up user data directory:", user_data_dir)
+        except Exception as e:
+            print("Failed to clean up user data directory:", e)
 
 df = pd.DataFrame(results)
 today_str = datetime.now().strftime('%Y%m%d')
