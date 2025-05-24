@@ -38,11 +38,20 @@ jobs:
       - name: Run IBBI scraper
         run: python ibbi.gov.py
 
+      - name: Wait for cleanup
+        run: sleep 5
+
       - name: Run Albion Bank scraper
         run: python albion_bank.py
 
+      - name: Wait for cleanup
+        run: sleep 5
+
       - name: Run Bank e-Auctions scraper
         run: python bank_e_auctions.py
+
+      - name: Wait for cleanup
+        run: sleep 5
 
       - name: Run Web3 scraper
         run: python web3_scrape.py
