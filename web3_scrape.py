@@ -9,8 +9,9 @@ import pandas as pd
 from selenium.common.exceptions import TimeoutException
 from datetime import datetime
 import os
-import shutil  # Added for directory cleanup
-import psutil  # Added for process cleanup
+import shutil
+import psutil
+import tempfile
 
 options = Options()
 # options.add_argument("--headless")
@@ -18,10 +19,6 @@ options = Options()
 # Output directory
 DOWNLOAD_DIR = "auction_exports"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-# Specify a unique user data directory
-user_data_dir = os.path.join(DOWNLOAD_DIR, "chrome_user_data_web3")
-options.add_argument(f"--user-data-dir={user_data_dir}")
 
 def cleanup_chrome_processes():
     """Kill any lingering Chrome processes."""
@@ -32,6 +29,13 @@ def cleanup_chrome_processes():
                 print(f"Killed lingering process: {proc.info['name']}")
             except psutil.NoSuchProcess:
                 pass
+
+# Clean up any lingering Chrome processes before starting
+cleanup_chrome_processes()
+
+# Create a temporary user data directory
+user_data_dir = tempfile.mkdtemp(prefix="chrome_user_data_web3_")
+options.add_argument(f"--user-data-dir={user_data_dir}")
 
 driver = None
 try:
