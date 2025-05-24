@@ -9,8 +9,13 @@ import pandas as pd
 import hashlib
 from datetime import datetime
 import os
-import shutil  # Added for directory cleanup
-import psutil  # Added for process cleanup
+import shutil
+import psutil
+import tempfile
+
+# Output directory
+DOWNLOAD_DIR = "auction_exports"
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # Set up Chrome options for headless mode
 chrome_options = Options()
@@ -19,14 +24,6 @@ chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--window-size=1920,1080")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
-
-# Output directory
-DOWNLOAD_DIR = "auction_exports"
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-# Specify a unique user data directory
-user_data_dir = os.path.join(DOWNLOAD_DIR, "chrome_user_data_bank_e")
-chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
 
 def cleanup_chrome_processes():
     """Kill any lingering Chrome processes."""
@@ -37,6 +34,13 @@ def cleanup_chrome_processes():
                 print(f"Killed lingering process: {proc.info['name']}")
             except psutil.NoSuchProcess:
                 pass
+
+# Clean up any lingering Chrome processes before starting
+cleanup_chrome_processes()
+
+# Create a temporary user data directory
+user_data_dir = tempfile.mkdtemp(prefix="chrome_user_data_bank_e_")
+chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
 
 # Initialize the WebDriver
 driver = None
