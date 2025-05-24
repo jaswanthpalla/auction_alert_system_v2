@@ -7,7 +7,9 @@ import time
 import logging
 import os
 import glob
-from datetime import datetime  # Added for date suffix
+from datetime import datetime
+import shutil  # Added for directory cleanup
+import psutil  # Added for process cleanup
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -18,7 +20,7 @@ DOWNLOAD_DIR = "auction_exports"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 def setup_chrome_options():
-    """Set up Chrome options for headless browsing."""
+    """Set up Chrome options for headless browsing with a unique user data directory."""
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
@@ -26,6 +28,9 @@ def setup_chrome_options():
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
+    # Specify a unique user data directory
+    user_data_dir = os.path.join(DOWNLOAD_DIR, "chrome_user_data_ibbi")
+    chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
     chrome_options.add_experimental_option('prefs', {
         "download.default_directory": os.path.abspath(DOWNLOAD_DIR),
         "download.prompt_for_download": False,
@@ -33,14 +38,25 @@ def setup_chrome_options():
         "plugins.always_open_pdf_externally": True,
         "safebrowsing.enabled": True
     })
-    return chrome_options
+    return chrome_options, user_data_dir
+
+def cleanup_chrome_processes():
+    """Kill any lingering Chrome processes."""
+    for proc in psutil.process_iter(['name']):
+        if proc.info['name'] in ['chrome', 'chromedriver']:
+            try:
+                proc.kill()
+                logger.info(f"Killed lingering process: {proc.info['name']}")
+            except psutil.NoSuchProcess:
+                pass
 
 def scrape_auctions():
     """Scrape auction data from IBBI website and download Excel file."""
     driver = None
+    user_data_dir = None
     try:
         # Setup Chrome driver
-        chrome_options = setup_chrome_options()
+        chrome_options, user_data_dir = setup_chrome_options()
         logger.info("Download directory set to: %s", os.path.abspath(DOWNLOAD_DIR))
         driver = webdriver.Chrome(options=chrome_options)
         
@@ -89,6 +105,14 @@ def scrape_auctions():
         if driver:
             driver.quit()
             logger.info("Browser closed")
+        # Additional cleanup
+        cleanup_chrome_processes()
+        if user_data_dir and os.path.exists(user_data_dir):
+            try:
+                shutil.rmtree(user_data_dir)
+                logger.info("Cleaned up user data directory: %s", user_data_dir)
+            except Exception as e:
+                logger.warning("Failed to clean up user data directory: %s", e)
 
 if __name__ == "__main__":
     scrape_auctions()
