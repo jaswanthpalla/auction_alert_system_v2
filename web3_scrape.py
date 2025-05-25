@@ -133,6 +133,7 @@ try:
             data['Submission Start Date'] = get_value("Submission Start Date")
             data['Submission End Date'] = get_value("Submission End Date")
             data['Auction Start Date'] = get_value("Auction Start Date")
+            data['Product Category'] = get_value("Product Category") 
 
             results.append(data)
             driver.close()
