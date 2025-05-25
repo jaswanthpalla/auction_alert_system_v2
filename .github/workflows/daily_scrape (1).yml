@@ -38,23 +38,23 @@ jobs:
       - name: Run IBBI scraper
         run: python ibbi.gov.py
 
-      - name: Wait for cleanup
-        run: sleep 5
+      # - name: Wait for cleanup
+      #   run: sleep 5
 
-      - name: Run Albion Bank scraper
-        run: python albion_bank.py
+      # - name: Run Albion Bank scraper
+      #   run: python albion_bank.py
 
-      - name: Wait for cleanup
-        run: sleep 5
+      # - name: Wait for cleanup
+      #   run: sleep 5
 
-      - name: Run Bank e-Auctions scraper
-        run: python bank_e_auctions.py
+      # - name: Run Bank e-Auctions scraper
+      #   run: python bank_e_auctions.py
 
-      - name: Wait for cleanup
-        run: sleep 5
+      # - name: Wait for cleanup
+      #   run: sleep 5
 
-      - name: Run Web3 scraper
-        run: python web3_scrape.py
+      # - name: Run Web3 scraper
+      #   run: python web3_scrape.py
 
       - name: Debug directory contents after scraping
         run: |
@@ -83,6 +83,8 @@ jobs:
           ls auction_exports/*.xls >/dev/null 2>&1 && git add auction_exports/*.xls || echo "No .xls files to add"
           ls auction_exports/*.csv >/dev/null 2>&1 && git add auction_exports/*.csv || echo "No .csv files to add"
           git commit -m "Update auction files for $(date +%Y-%m-%d)" || echo "No changes to commit"
+          git fetch origin
+          git pull --rebase origin main
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
