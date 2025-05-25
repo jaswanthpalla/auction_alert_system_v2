@@ -1,6 +1,6 @@
 selenium==4.25.0
-webdriver-manager==4.0.2
 pandas==2.2.2
 streamlit==1.38.0
 sendgrid==6.11.0
-
+beautifulsoup4==4.12.3
+psutil==5.9.8
