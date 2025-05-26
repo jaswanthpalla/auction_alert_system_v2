@@ -3,6 +3,7 @@ import pandas as pd
 import glob
 import os
 
+st.set_page_config(layout="wide")
 st.title("Auction Notices")
 
 # Find the latest combined CSV file
