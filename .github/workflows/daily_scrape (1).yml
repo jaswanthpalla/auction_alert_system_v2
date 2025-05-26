@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         scraper:
-          - ibbi.gov.py
+          - ib decimalsbi.gov.py
           - albion_bank.py
           - bank_e_auctions.py
           - web3_scrape.py
@@ -43,7 +43,7 @@ jobs:
           if [ -f /usr/bin/chromedriver ]; then
             sudo rm /usr/bin/chromedriver
           fi
-          sudo ln -s /usr/lib/chromium-browser/chromedriver /usr/bin/chromedriver
+          sudo ln -s /usr/lib/chromium-browser/chroredriver /usr/bin/chromedriver
 
       - name: Install dependencies
         run: |
@@ -52,6 +52,14 @@ jobs:
 
       - name: Run scraper ${{ matrix.scraper }}
         run: python ${{ matrix.scraper }}
+
+      - name: Upload auction exports artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: auction-exports
+          path: auction_exports/
+          retention-days: 1
+          if-no-files-found: error
 
   combine-and-alert:
     needs: run-scrapers
@@ -67,6 +75,12 @@ jobs:
         run: |
           git clean -fdx
           git reset --hard
+
+      - name: Download auction exports artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: auction-exports
+          path: auction_exports/
 
       - name: Set up Python
         uses: actions/setup-python@v5
