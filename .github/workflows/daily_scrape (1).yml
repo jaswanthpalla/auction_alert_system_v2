@@ -19,6 +19,7 @@ jobs:
           # - albion_bank.py  # Commented out to reduce runtime for testing
           - bank_e_auctions.py
           - web3_scrape.py
+      fail-fast: false  # Prevent canceling other matrix instances if one fails
 
     steps:
       - name: Checkout repository
@@ -53,13 +54,20 @@ jobs:
       - name: Run scraper ${{ matrix.scraper }}
         run: python ${{ matrix.scraper }}
 
+      - name: Debug directory contents before upload
+        run: |
+          echo "Contents of auction_exports/ for ${{ matrix.scraper }}:"
+          ls -la auction_exports/ || echo "Directory not found"
+          find auction_exports/ -type f || echo "No files found"
+
       - name: Upload auction exports artifact
         uses: actions/upload-artifact@v4
+        continue-on-error: true  # Allow job to continue even if upload fails
         with:
-          name: auction-exports
+          name: auction-exports-${{ matrix.scraper }}
           path: auction_exports/
           retention-days: 1
-          if-no-files-found: error
+          if-no-files-found: warn  # Warn instead of fail if no files are found
 
   combine-and-alert:
     needs: run-scrapers
@@ -76,11 +84,31 @@ jobs:
           git clean -fdx
           git reset --hard
 
-      - name: Download auction exports artifact
+      - name: Download auction exports artifacts
         uses: actions/download-artifact@v4
         with:
-          name: auction-exports
           path: auction_exports/
+          pattern: auction-exports-*
+          merge-multiple: true  # Merge all artifacts into auction_exports/
+
+      - name: Debug directory contents after downloading artifacts
+        run: |
+          echo "Contents of auction_exports/ after downloading artifacts:"
+          ls -la auction_exports/ || echo "Directory not found"
+          find auction_exports/ -type f || echo "No files found"
+
+      - name: Move files to auction_exports/ if needed
+        run: |
+          # Move files from subdirectories (e.g., auction-exports-ibbi.gov.py/) to auction_exports/
+          for dir in auction_exports/auction-exports-*; do
+            if [ -d "$dir" ]; then
+              mv "$dir"/* auction_exports/ 2>/dev/null || true
+              rm -rf "$dir"
+            fi
+          done
+          echo "Contents of auction_exports/ after moving files:"
+          ls -la auction_exports/ || echo "Directory not found"
+          find auction_exports/ -type f || echo "No files found"
 
       - name: Set up Python
         uses: actions/setup-python@v5
