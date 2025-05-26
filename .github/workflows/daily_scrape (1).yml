@@ -3,7 +3,11 @@ name: Daily Auction Scrape
 on:
   schedule:
     - cron: '15 4 * * *'  # Runs daily at 6:00 AM IST (00:15 UTC)
-  workflow_dispatch:  # Allows manual trigger
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   scrape:
@@ -15,6 +19,25 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Clean working directory
+        run: |
+          git clean -fdx
+          git reset --hard
+
+      - name: Check for active workflow runs
+        run: |
+          gh run list --workflow "Daily Auction Scrape" --status in_progress --json databaseId | jq '.[] | .databaseId' > active_runs.txt
+          if [ -s active_runs.txt ]; then
+            echo "Active runs found. Cancelling them..."
+            while read -r run_id; do
+              gh run cancel $run_id
+            done < active_runs.txt
+          else
+            echo "No active runs found."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -23,8 +46,7 @@ jobs:
       - name: Install Chrome and Chromedriver
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-browser
-          sudo apt-get install -y chromium-chromedriver
+          sudo apt-get install -y chromium-browser chromium-chromedriver
           if [ -f /usr/bin/chromedriver ]; then
             sudo rm /usr/bin/chromedriver
           fi
@@ -76,13 +98,17 @@ jobs:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
 
+      - name: Debug untracked or modified files
+        run: |
+          git status
+          git diff
+
       - name: Commit and push files
         run: |
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
-          ls auction_exports/*.xls >/dev/null 2>&1 && git add auction_exports/*.xls || echo "No .xls files to add"
-          ls auction_exports/*.csv >/dev/null 2>&1 && git add auction_exports/*.csv || echo "No .csv files to add"
-          git commit -m "Update auction files for $(date +%Y-%m-%d)" || echo "No changes to commit"
+          git add auction_exports/* *.py
+          git commit -m "Update auction files and scripts for $(date +%Y-%m-%d)" || echo "No changes to commit"
           git fetch origin
           git pull --rebase origin main
           git push
