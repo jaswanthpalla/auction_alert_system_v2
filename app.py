@@ -21,21 +21,19 @@ else:
     st.write("### Data Preview")
     st.dataframe(df.head())
 
-    # --- COMMENTED OUT BLOCKS BELOW ---
+    # ✅ Filter by Source
+    st.write("### Filter Auctions by Source")
+    sources = ['All'] + sorted(df['Source'].unique().tolist())
+    selected_source = st.selectbox("Select Source:", sources, index=0)
+
+    # Apply Source filter
+    if selected_source != 'All':
+        df = df[df['Source'] == selected_source]
+
+    # --- REMAINING COMMENTED BLOCKS ---
     #
-    # # Add a dropdown for selecting the Source
-    # st.write("### Filter Auctions by Source")
-    # sources = ['All'] + sorted(df['Source'].unique().tolist())
-    # selected_source = st.selectbox("Select Source:", sources, index=0)
-    #
-    # # Apply Source filter
-    # if selected_source != 'All':
-    #     df = df[df['Source'] == selected_source]
-    #
-    # # Add a slider for selecting the range of days until submission
     # st.write("### Filter Auctions by Days Until Submission")
     # if 'days_until_submission' in df.columns:
-    #     # Convert to numeric (replace invalid with NaN)
     #     df['days_until_submission'] = pd.to_numeric(df['days_until_submission'], errors='coerce')
     #     min_days = df['days_until_submission'].min()
     #     max_days = df['days_until_submission'].max()
@@ -62,22 +60,4 @@ else:
     #             ]
     #             st.session_state['filtered_df'] = filtered_df
     # else:
-    #     st.error("Column 'days_until_submission' not found in the data.")
-    #     filtered_df = df
-    #
-    # # Display the filtered data (use session state if available)
-    # if 'filtered_df' in st.session_state:
-    #     filtered_df = st.session_state['filtered_df']
-    # else:
-    #     filtered_df = df
-    #
-    # st.write("### Auction Listings")
-    # st.dataframe(filtered_df)
-    #
-    # # Add a download button for the filtered CSV
-    # st.download_button(
-    #     label="Download Filtered CSV",
-    #     data=filtered_df.to_csv(index=False).encode('utf-8'),
-    #     file_name=f"combined_auctions_filtered_{os.path.basename(latest_csv).split('_')[-1]}",
-    #     mime="text/csv"
-    # )
+    #     st.error("Column 'days_until_submission'
