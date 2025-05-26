@@ -24,7 +24,7 @@ else:
     if selected_source != 'All':
         df = df[df['Source'] == selected_source]
 
-    # ✅ Filter by Days Until Submission
+    # Filter by Days Until Submission
     st.write("### Filter Auctions by Days Until Submission")
     if 'days_until_submission' in df.columns:
         df['days_until_submission'] = pd.to_numeric(df['days_until_submission'], errors='coerce')
@@ -56,21 +56,20 @@ else:
         st.error("Column 'days_until_submission' not found in the data.")
         filtered_df = df
 
-    # ✅ Use filtered_df if available
+    # Use filtered data if available
     if 'filtered_df' in st.session_state:
         filtered_df = st.session_state['filtered_df']
     else:
         filtered_df = df
 
-    # --- STILL COMMENTED: download button below ---
-    #
-    # st.download_button(
-    #     label="Download Filtered CSV",
-    #     data=filtered_df.to_csv(index=False).encode('utf-8'),
-    #     file_name=f"combined_auctions_filtered_{os.path.basename(latest_csv).split('_')[-1]}",
-    #     mime="text/csv"
-    # )
-
-    # Show final table
+    # Display the filtered auction listings
     st.write("### Auction Listings")
     st.dataframe(filtered_df)
+
+    # ✅ Download button
+    st.download_button(
+        label="Download Filtered CSV",
+        data=filtered_df.to_csv(index=False).encode('utf-8'),
+        file_name=f"combined_auctions_filtered_{os.path.basename(latest_csv).split('_')[-1]}",
+        mime="text/csv"
+    )
