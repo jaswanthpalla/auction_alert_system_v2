@@ -16,7 +16,7 @@ jobs:
       matrix:
         scraper:
           - ibbi.gov.py
-          # - albion_bank.py  # Commented out to reduce runtime for testing
+          - albion_bank.py  # Commented out to reduce runtime for testing
           - bank_e_auctions.py
           - web3_scrape.py
       fail-fast: false  # Prevent canceling other matrix instances if one fails
