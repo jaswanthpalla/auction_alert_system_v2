@@ -15,8 +15,8 @@ jobs:
     strategy:
       matrix:
         scraper:
-          - ib decimalsbi.gov.py
-          - albion_bank.py
+          - ibbi.gov.py
+          # - albion_bank.py  # Commented out to reduce runtime for testing
           - bank_e_auctions.py
           - web3_scrape.py
 
@@ -43,7 +43,7 @@ jobs:
           if [ -f /usr/bin/chromedriver ]; then
             sudo rm /usr/bin/chromedriver
           fi
-          sudo ln -s /usr/lib/chromium-browser/chroredriver /usr/bin/chromedriver
+          sudo ln -s /usr/lib/chromium-browser/chromedriver /usr/bin/chromedriver
 
       - name: Install dependencies
         run: |
